@@ -303,7 +303,7 @@ export default function Home() {
               </div>
             )}
           </div>
-          <div className="message-bottom-text">⚡ Maiya gives her best advice, but babe, always double-check important info!</div>
+          <div className="message-bottom-text">⚡ Maiya gives her best advice, but babe, always double-check important info please!</div>
         </div>
       </div>
 
