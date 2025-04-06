@@ -83,11 +83,19 @@ export default function Home() {
 
       const invalidKeywords = ["dog", "cat", "person", "people", "human"];
       const lastWasImagePrompt = imagePromptRef.current;
+<<<<<<< HEAD
       
       const isImageDescription =
         lastWasImagePrompt &&
         !invalidKeywords.some((kw) => content.toLowerCase().includes(kw)) &&
         content.trim().length >= 4;      
+=======
+      const isImageDescription =
+        lastWasImagePrompt &&
+        content.length > 10 &&
+        content.split(" ").length > 2 &&
+        !invalidKeywords.some((kw) => content.toLowerCase().includes(kw));
+>>>>>>> 93a822e2dd09c052af5a12db53b584cb5b8f493d
 
       const res = await fetch(isImageDescription ? "/api/generate-image" : "/api/maiyabot", {
         method: "POST",
@@ -303,7 +311,7 @@ export default function Home() {
               </div>
             )}
           </div>
-          <div className="message-bottom-text">⚡ Maiya gives her best advice, but babe, always double-check important info!</div>
+          <div className="message-bottom-text">⚡ Maiya gives her best advice, but babe, always double-check important info please!</div>
         </div>
       </div>
 
