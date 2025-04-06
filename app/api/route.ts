@@ -1,18 +1,21 @@
-import type { NextApiRequest, NextApiResponse } from "next";
+// app/api/route.ts
 import OpenAI from "openai";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { prompt } = req.body;
-
-  if (!prompt || prompt.length < 10) {
-    return res.status(400).json({ error: "Invalid prompt" });
-  }
-
+export async function POST(req: Request) {
   try {
+    const { prompt } = await req.json();
+
+    if (!prompt || prompt.length < 10) {
+      return new Response(JSON.stringify({ error: "Invalid prompt" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const response = await openai.images.generate({
       model: "dall-e-3",
       prompt,
@@ -20,10 +23,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       size: "1024x1024",
     });
 
-    const imageUrl = response.data[0].url; // ✅ safer access
-    res.status(200).json({ imageUrl });
+    const imageUrl = response.data[0]?.url;
+
+    return new Response(JSON.stringify({ imageUrl }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error: any) {
     console.error("Image generation failed:", error);
-    res.status(500).json({ error: "Image generation failed", details: error.message });
+    return new Response(JSON.stringify({ error: "Image generation failed", details: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
