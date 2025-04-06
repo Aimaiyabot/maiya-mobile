@@ -33,7 +33,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ imageUrl });
   } catch (error: any) {
-    console.error("Image generation error:", error);
-    return NextResponse.json({ error: "Image generation failed", details: error.message }, { status: 500 });
+    console.error("Image generation failed:", error);
+    return NextResponse.json(
+      { error: "Image generation failed", details: error.message },
+      { status: 500 }
+    );
   }
 }
