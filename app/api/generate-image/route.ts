@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server'; 
 
 // Export runtime config
 export const runtime = 'edge';
@@ -6,12 +6,14 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 // Keywords to skip AI art and use fallback
-const layoutKeywords = ["infographic", "marketing", "poster", "layout", "checklist", 
+const layoutKeywords = [
+  "infographic", "marketing", "poster", "layout", "checklist", 
   "steps", "template", "guide", "tutorial", "process", "workflow", "diagram",
   "chart", "graph", "comparison", "table", "list", "bullet", "point", "item",
   "section", "part", "chapter", "heading", "title", "subtitle", "caption",
   "dashboard", "report", "summary", "overview", "outline", "structure", "format",
-  "style", "theme", "font", "typography", "content"];
+  "style", "theme", "font", "typography", "content"
+];
 
 function needsVisualFallback(prompt: string): boolean {
   const lower = prompt.toLowerCase();
@@ -38,7 +40,19 @@ function buildStyledPrompt(userPrompt: string): string {
     visualStyle = "product mockup";
   }
 
-  return `Create a highly aesthetic, ultra-detailed image of: ${userPrompt}. Visual Style: Use a ${visualStyle} approach. Focus on sharp details, smooth lighting, and realistic textures. Pixar/Disney-level rendering or studio-quality photography vibe. Background should be clean or complementary. No text or UI unless specifically requested. Avoid distortion, blurriness, or fake letters. Prioritize clean layout, clear lighting, smooth composition, and rich detail. The image should be creative, beautiful, and ready to use for content, branding, or visual storytelling.`;
+  return `
+Create a highly aesthetic, ultra-detailed image of: ${userPrompt}
+
+Visual Style:
+- Use a ${visualStyle} approach
+- Focus on sharp details, smooth lighting, and realistic textures
+- Pixar/Disney-level rendering or studio-quality photography vibe
+- Background should be clean or complementary
+- No text or UI unless specifically requested
+- Avoid distortion, blurriness, or fake letters
+- Prioritize clean layout, clear lighting, smooth composition, and rich detail
+- The image should be creative, beautiful, and ready to use for content, branding, or visual storytelling
+`;
 }
 
 export async function POST(request: Request) {
@@ -95,18 +109,18 @@ export async function POST(request: Request) {
     if (!imageUrl) {
       throw new Error('No image URL received from OpenAI');
     }
-    
+
     return NextResponse.json({ 
       imageUrl,
       success: true 
     });
 
   } catch (error: any) {
-    console.error("Image generation failed:", error.message || error);
+    console.error("Image generation failed:", error?.message || error);
     return NextResponse.json(
       { 
         error: "Image generation failed", 
-        details: error.message,
+        details: error?.message || "Unknown error",
         success: false
       },
       { status: 500 }
