@@ -1,21 +1,20 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
+// Export runtime config
+export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 // Keywords to skip AI art and use fallback
+const layoutKeywords = ["infographic", "marketing", "poster", "layout", "checklist", 
+  "steps", "template", "guide", "tutorial", "process", "workflow", "diagram",
+  "chart", "graph", "comparison", "table", "list", "bullet", "point", "item",
+  "section", "part", "chapter", "heading", "title", "subtitle", "caption",
+  "dashboard", "report", "summary", "overview", "outline", "structure", "format",
+  "style", "theme", "font", "typography", "content"];
+
 function needsVisualFallback(prompt: string): boolean {
   const lower = prompt.toLowerCase();
-  const layoutKeywords = [
-    "infographic", "marketing", "poster", "layout", "checklist", 
-    "steps", "template", "guide", "tutorial", "process", "workflow", "diagram",
-    "chart", "graph", "comparison", "table", "list", "bullet", "point", "item",
-    "section", "part", "chapter", "heading", "title", "subtitle", "caption",
-    "dashboard", "report", "summary", "overview", "outline", "structure", "format",
-    "style", "theme", "font", "typography", "content"
-  ];
   return layoutKeywords.some(keyword => lower.includes(keyword));
 }
 
@@ -39,52 +38,78 @@ function buildStyledPrompt(userPrompt: string): string {
     visualStyle = "product mockup";
   }
 
-  return `
-Create a highly aesthetic, ultra-detailed image of: ${userPrompt}
-
-Visual Style:
-- Use a ${visualStyle} approach
-- Focus on sharp details, smooth lighting, and realistic textures
-- Pixar/Disney-level rendering or studio-quality photography vibe
-- Background should be clean or complementary
-- No text or UI unless specifically requested
-- Avoid distortion, blurriness, or fake letters
-- Prioritize clean layout, clear lighting, smooth composition, and rich detail
-- The image should be creative, beautiful, and ready to use for content, branding, or visual storytelling
-- The image should be a high-quality, professional-looking image
-`;
+  return `Create a highly aesthetic, ultra-detailed image of: ${userPrompt}. Visual Style: Use a ${visualStyle} approach. Focus on sharp details, smooth lighting, and realistic textures. Pixar/Disney-level rendering or studio-quality photography vibe. Background should be clean or complementary. No text or UI unless specifically requested. Avoid distortion, blurriness, or fake letters. Prioritize clean layout, clear lighting, smooth composition, and rich detail. The image should be creative, beautiful, and ready to use for content, branding, or visual storytelling.`;
 }
 
-export async function POST(req: Request) {
-  try {
-    const { prompt } = await req.json();
+export async function POST(request: Request) {
+  if (!process.env.OPENAI_API_KEY) {
+    return NextResponse.json(
+      { error: "OpenAI API key is not configured" },
+      { status: 500 }
+    );
+  }
 
-    if (!prompt || prompt.trim().length < 5) {
-      return NextResponse.json({ error: "Prompt is too short or missing." }, { status: 400 });
+  try {
+    const { prompt } = await request.json();
+
+    if (!prompt || typeof prompt !== 'string' || prompt.trim().length < 5) {
+      return NextResponse.json(
+        { error: "Prompt must be a string with at least 5 characters" },
+        { status: 400 }
+      );
     }
 
     if (needsVisualFallback(prompt)) {
       return NextResponse.json({
         fallback: true,
-        message:
-          "Babe, this one works better as a layout or HTML design. Want me to make a styled mockup or infographic instead? 💻✨",
+        message: "Babe, this one works better as a layout or HTML design. Want me to make a styled mockup or infographic instead? 💻✨"
       });
     }
 
     const finalPrompt = buildStyledPrompt(prompt);
 
-    const response = await openai.images.generate({
-      model: "dall-e-3",
-      prompt: finalPrompt,
-      n: 1,
-      size: "1024x1024",
+    const response = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "dall-e-3",
+        prompt: finalPrompt,
+        n: 1,
+        size: "1024x1024",
+        quality: "standard",
+        response_format: "url"
+      })
     });
 
-    const imageUrl = response.data[0]?.url;
-    return NextResponse.json({ imageUrl });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || `OpenAI API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const imageUrl = data.data?.[0]?.url;
+
+    if (!imageUrl) {
+      throw new Error('No image URL received from OpenAI');
+    }
+    
+    return NextResponse.json({ 
+      imageUrl,
+      success: true 
+    });
 
   } catch (error: any) {
-    console.error("❌ Image generation failed:", error.message || error);
-    return NextResponse.json({ error: "Image generation failed.", details: error.message }, { status: 500 });
+    console.error("Image generation failed:", error.message || error);
+    return NextResponse.json(
+      { 
+        error: "Image generation failed", 
+        details: error.message,
+        success: false
+      },
+      { status: 500 }
+    );
   }
 }
